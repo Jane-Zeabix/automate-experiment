@@ -42,9 +42,16 @@ cp .env.example .env
 ## Authentication
 
 The app redirects to Microsoft sign-in (`login.microsoftonline.com`). A
-dedicated `setup` project (`tests/auth.setup.ts`) logs in once, picks the
-system on the "กรุณาเลือกระบบ" page, and caches the session to
+dedicated `setup` project (`tests/auth.setup.ts`) logs in, picks the system on
+the "กรุณาเลือกระบบ" page, and caches the session to
 `playwright/.auth/user.json`. All other tests reuse that session.
+
+**You don't log in every run.** On each run the setup first loads the cached
+session and just opens the app: if it's still signed in, it reuses the token
+and skips login entirely. It only performs a real Microsoft login when there is
+no cached session yet, when the app bounces it back to the login page, or when
+the cached file is older than `MAX_SESSION_AGE_HOURS` (default 12h — tune it in
+`tests/auth.setup.ts`). To force a fresh login, delete `playwright/.auth/`.
 
 If the account has **MFA**, run the first login headed so you can complete the
 challenge manually — the cached session is reused afterwards:

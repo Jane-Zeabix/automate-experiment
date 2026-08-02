@@ -1,5 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 import dotenv from 'dotenv';
+import fs from 'fs';
 import path from 'path';
 
 /**
@@ -37,10 +38,15 @@ export default defineConfig({
   },
 
   projects: [
-    /* Logs in via Microsoft once and stores the session for the other projects. */
+    /* Logs in via Microsoft once and stores the session for the other projects.
+     * Reuses the previously cached session if it still exists, so it only has
+     * to actually log in again when the token has expired. */
     {
       name: 'setup',
       testMatch: /.*\.setup\.ts/,
+      use: {
+        storageState: fs.existsSync(STORAGE_STATE) ? STORAGE_STATE : undefined,
+      },
     },
 
     {
