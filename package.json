@@ -2,7 +2,10 @@
   "name": "automate-experiment",
   "version": "1.0.0",
   "main": "index.js",
-  "scripts": {},
+  "scripts": {
+    "login": "node scripts/login.mjs",
+    "test": "playwright test"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
