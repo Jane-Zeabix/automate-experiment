@@ -41,17 +41,23 @@ cp .env.example .env
 
 ## Authentication
 
-The app redirects to Microsoft sign-in (`login.microsoftonline.com`). A
-dedicated `setup` project (`tests/auth.setup.ts`) logs in, picks the system on
-the "กรุณาเลือกระบบ" page, and caches the session to
-`playwright/.auth/user.json`. All other tests reuse that session.
+The app uses **Microsoft Entra External ID (CIAM)** — the sign-in page is on
+`lionexternal.ciamlogin.com`, and after login a "กรุณาเลือกระบบ" page lets you
+pick the **Love & Care** system. The shared helper `signIn()`
+(`tests/helpers/app.ts`) drives that whole flow, and the `fixtures.ts` `test`
+runs it automatically before each test.
 
-**You don't log in every run.** On each run the setup first loads the cached
-session and just opens the app: if it's still signed in, it reuses the token
-and skips login entirely. It only performs a real Microsoft login when there is
-no cached session yet, when the app bounces it back to the login page, or when
-the cached file is older than `MAX_SESSION_AGE_HOURS` (default 12h — tune it in
-`tests/auth.setup.ts`). To force a fresh login, delete `playwright/.auth/`.
+**You don't type your password every run.** The `setup` project logs in once
+and caches the persistent SSO cookies to `playwright/.auth/user.json`. After
+that, each run only needs a one-click "Pick an account" (no password). Setup
+re-authenticates only when there's no cache yet or it's older than
+`MAX_SESSION_AGE_HOURS` (default 12h — tune it in `tests/auth.setup.ts`). To
+force a fresh login, delete `playwright/.auth/`.
+
+> The app keeps its access token in `sessionStorage` (which Playwright's
+> `storageState` does not persist) and always requests `prompt=select_account`,
+> so each browser context still does one account-pick — hence sign-in runs
+> per test via the fixture, but without a password.
 
 If the account has **MFA**, run the first login headed so you can complete the
 challenge manually — the cached session is reused afterwards:
@@ -82,18 +88,21 @@ npx playwright show-report
 ```
 .
 ├── tests/
-│   ├── auth.setup.ts       # Microsoft login → cached storageState
+│   ├── auth.setup.ts       # CIAM login once → cached SSO cookies
+│   ├── fixtures.ts         # `test` that auto-signs-in before each test
+│   ├── helpers/
+│   │   └── app.ts          # signIn() + gotoCompanies()/gotoBranches()
 │   ├── company.spec.ts     # จัดการบริษัท (UC8.3) — LSP-SC-TC-FT-*
 │   ├── branch.spec.ts      # จัดการสาขา (UC8.4)   — LSP-SR-TC-FT-*
 │   └── pages/              # Page Objects
-│       ├── CompanyPage.ts
-│       └── BranchPage.ts
+│       ├── CompanyPage.ts  # /love-care/setting/companies
+│       └── BranchPage.ts   # /love-care/setting/branches
 ├── playwright.config.ts    # Config: baseURL, dotenv, setup + chromium projects
 ├── .env.example            # Template for .env (real .env is gitignored)
 └── package.json
 ```
 
 > The current specs are **templates** covering a representative subset of the
-> บริษัท (53) and สาขา (38) test cases. Selectors are best-effort from the Thai
-> UI labels in the source document — refine them against the real Dev DOM
-> (prefer `data-testid` where available), then extend to the full case list.
+> บริษัท (53) and สาขา (38) test cases, wired to the real Dev DOM (routes,
+> headers, search box, buttons). Extend them to the full case list following
+> the same pattern.

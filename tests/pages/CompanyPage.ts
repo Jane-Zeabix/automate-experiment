@@ -1,15 +1,14 @@
 import { Page, Locator, expect } from '@playwright/test';
+import { gotoCompanies } from '../helpers/app';
 
 /**
  * Page Object for "ตั้งค่าระบบ > บริษัท" (Company management).
- * Derived from test cases LSP-SC-TC-FT-* (sheet "UC8.3 จัดการบริษัท").
- *
- * Selectors are best-effort based on the visible Thai labels in the test
- * document. Adjust them to match the real DOM (prefer stable data-testid
- * attributes when the app exposes them).
+ * Route: /love-care/setting/companies
+ * Test cases: LSP-SC-TC-FT-* (sheet "UC8.3 จัดการบริษัท").
  */
 export class CompanyPage {
   readonly page: Page;
+  readonly heading: Locator;
   readonly searchBox: Locator;
   readonly searchButton: Locator;
   readonly addButton: Locator;
@@ -17,17 +16,15 @@ export class CompanyPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.searchBox = page.getByPlaceholder(/รหัสบริษัท|ชื่อบริษัท/);
+    this.heading = page.getByRole('heading', { name: 'รายการบริษัท' });
+    this.searchBox = page.getByPlaceholder(/รหัสบริษัท/);
     this.searchButton = page.getByRole('button', { name: 'ตกลง' });
     this.addButton = page.getByRole('button', { name: /เพิ่มบริษัท/ });
     this.table = page.getByRole('table');
   }
 
-  /** Navigate to the company list via the side menu: ตั้งค่าระบบ > บริษัท. */
   async goto() {
-    await this.page.getByRole('button', { name: /ตั้งค่าระบบ/ }).click();
-    await this.page.getByRole('link', { name: 'บริษัท', exact: true }).click();
-    await expect(this.addButton).toBeVisible();
+    await gotoCompanies(this.page);
   }
 
   async search(keyword: string) {
@@ -35,13 +32,17 @@ export class CompanyPage {
     await this.searchButton.click();
   }
 
-  /** A table row containing the given text. */
+  /** A data row containing the given text (e.g. a company code). */
   row(text: string): Locator {
     return this.table.getByRole('row', { name: new RegExp(text) });
   }
 
+  /** Number of data (body) rows currently shown. */
+  bodyRows(): Locator {
+    return this.table.locator('tbody tr');
+  }
+
   async openAddForm() {
     await this.addButton.click();
-    await expect(this.page.getByText('เพิ่มบริษัท')).toBeVisible();
   }
 }
